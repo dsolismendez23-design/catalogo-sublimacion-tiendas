@@ -26,10 +26,17 @@ La tienda sale en:
 
 Los archivos quedan en `Documentos\Pedidos Sublimacion Tiendas`.
 
-## Archivo para celular Android
-En **Configuración → Generar archivo para celular** se crea `Documentos\Catalogo Sublimacion Tiendas celular\CatalogoSublimacionTiendas.html`. Páselo al celular y ábralo con Chrome. En el celular también pide la tienda.
+## Celulares Android y iPhone: enlace publicado (recomendado)
+**https://dsolismendez23-design.github.io/catalogo-sublimacion-tiendas/**
 
-Esta app todavía **no tiene enlace publicado** en internet (el del catálogo original sigue siendo solo del original). Para iPhone haría falta publicarla aparte.
+- En la app de Windows: Configuración → **Copiar enlace**, y envíelo por WhatsApp a cada tienda.
+- **Android:** abrir el enlace en **Chrome** → menú ⋮ → **Agregar a pantalla principal** (o **Instalar app**). Queda el ícono "Pedidos tiendas".
+- **iPhone:** abrir en **Safari** → Compartir → **Agregar a pantalla de inicio**.
+- **Se actualiza solo** todos los días a las 5:20 a. m. con los diseños nuevos del Google Drive. Para actualizar al momento: https://github.com/dsolismendez23-design/catalogo-sublimacion-tiendas/actions → *Publicar catálogo tiendas* → **Run workflow**.
+- Es público: cualquiera con el enlace ve el catálogo. Los pedidos y el control se guardan solo en cada celular; no quedan en GitHub.
+
+## Archivo para celular Android (sin internet de por medio)
+En **Configuración → Generar archivo para celular** se crea `Documentos\Catalogo Sublimacion Tiendas celular\CatalogoSublimacionTiendas.html`. Páselo al celular y ábralo con Chrome. No se actualiza solo y no queda con ícono.
 
 ## Para programar
 - `npm start`: abre la app.
