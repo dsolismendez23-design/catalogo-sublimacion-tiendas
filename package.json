@@ -1,0 +1,58 @@
+{
+  "name": "catalogo-sublimacion-tiendas",
+  "productName": "Catalogo Sublimacion Tiendas",
+  "version": "1.1.0",
+  "description": "Catálogo de diseños de sublimación para pedidos de las tiendas (SAN RAMÓN, HEREDIA, CARTAGO, GUAPILES, DESAMPARADOS, TIBAS, BODEGA)",
+  "main": "main.js",
+  "author": "Diana",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "movil": "node movil.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "exceljs": "^4.4.0",
+    "jspdf": "^2.5.2"
+  },
+  "build": {
+    "appId": "com.diana.catalogosublimaciontiendas",
+    "productName": "Catalogo Sublimacion Tiendas",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "drive.js",
+      "movil.js",
+      "src/**/*",
+      "build/icon.png",
+      "build/pdf.png",
+      "package.json",
+      "build/xlsx.png"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Catálogo Sublimación Tiendas",
+      "artifactName": "CatalogoSublimacionTiendas-Instalador-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "CatalogoSublimacionTiendas-Portable-${version}.${ext}"
+    }
+  }
+}
