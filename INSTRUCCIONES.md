@@ -32,7 +32,7 @@ Los archivos quedan en `Documentos\Pedidos Sublimacion Tiendas`.
 - En la app de Windows: Configuración → **Copiar enlace**, y envíelo por WhatsApp a cada tienda.
 - **Android:** abrir el enlace en **Chrome** → menú ⋮ → **Agregar a pantalla principal** (o **Instalar app**). Queda el ícono "Pedidos tiendas".
 - **iPhone:** abrir en **Safari** → Compartir → **Agregar a pantalla de inicio**.
-- **Se actualiza solo** todos los días a las 5:20 a. m. con los diseños nuevos del Google Drive. Para actualizar al momento: https://github.com/dsolismendez23-design/catalogo-sublimacion-tiendas/actions → *Publicar catálogo tiendas* → **Run workflow**.
+- **Se actualiza solo** cada 4 horas (6:20 y 10:20 a. m., 2:20 y 6:20 p. m., etc.) con los diseños nuevos del Google Drive. GitHub a veces atrasa estas corridas un par de horas. Para actualizar al momento: https://github.com/dsolismendez23-design/catalogo-sublimacion-tiendas/actions → *Publicar catálogo tiendas* → **Run workflow**.
 - Es público: cualquiera con el enlace ve el catálogo. Los pedidos y el control se guardan solo en cada celular; no quedan en GitHub.
 
 ## Archivo para celular Android (sin internet de por medio)
