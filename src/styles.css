@@ -99,7 +99,7 @@ main { flex: 1; min-height: 0; }
 .ped-item .d small { display: block; color: var(--suave); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cant { display: flex; align-items: center; gap: 2px; }
 .cant button { padding: 0; width: 22px; height: 22px; line-height: 1; background: var(--fondo); }
-.cant input { width: 38px; padding: 2px; text-align: center; }
+.cant input { width: 46px; padding: 2px; text-align: center; }
 .quitar { background: none; color: var(--suave); padding: 2px 4px; font-size: 16px; }
 .quitar:hover { color: var(--peligro); }
 
@@ -270,3 +270,4 @@ body.modo-web .solo-escritorio { display: none !important; }
 .rev-item.ok { background: #f3fbf6; }
 .rev-item.ok .d b { color: var(--ok); }
 .rev-aviso { margin: 10px 0; color: var(--suave); font-size: 13px; }
+.rev-notas { padding: 8px 12px; font-size: 13px; color: var(--suave); font-style: italic; }

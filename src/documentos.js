@@ -2,7 +2,10 @@
 // Un pedido puede traer varios clientes: { numero, fecha, clientes: [{ cliente, telefono, notas, items: [...] }] }
 (function () {
   const num4 = (n) => String(n).padStart(4, '0');
-  const unidades = (items) => items.reduce((s, i) => s + i.cantidad, 0);
+  // Las cantidades pueden ser fraccionadas (ej. 1.25): se redondean a 2 decimales y se muestran con punto
+  const red2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+  const cant = (n) => String(red2(n));
+  const unidades = (items) => red2(items.reduce((s, i) => s + Number(i.cantidad || 0), 0));
   const MIME = { pdf: 'application/pdf', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 
   // Pedidos guardados antes de que existieran varios clientes: { cliente, telefono, notas, items }
@@ -35,11 +38,11 @@
       `*PEDIDO #${num4(p.numero)}*`,
       ...(p.tienda ? [`*TIENDA: ${p.tienda}*`] : []),
       `Fecha: ${new Date(p.fecha).toLocaleString('es-CR')}`,
-      `Clientes: ${t.clientes} · Diseños: ${t.disenos} · Unidades: ${t.unidades}`,
+      `Clientes: ${t.clientes} · Diseños: ${t.disenos} · Unidades: ${cant(t.unidades)}`,
     ];
     for (const c of p.clientes) {
       lineas.push('', `*${c.cliente}*${c.telefono ? ` (${c.telefono})` : ''}`);
-      for (const i of c.items) lineas.push(`• ${i.codigo} x${i.cantidad} (${i.ruta.join(' / ')})`);
+      for (const i of c.items) lineas.push(`• ${i.codigo} x${cant(i.cantidad)} (${i.ruta.join(' / ')})`);
       if (c.notas) lineas.push(`Notas: ${c.notas}`);
     }
     lineas.push('', 'Adjunto el archivo del pedido.');
@@ -100,7 +103,7 @@
       y = 136;
     }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...negro);
-    doc.text(`Clientes: ${t.clientes}      Diseños: ${t.disenos}      Unidades: ${t.unidades}`, M, y);
+    doc.text(`Clientes: ${t.clientes}      Diseños: ${t.disenos}      Unidades: ${cant(t.unidades)}`, M, y);
     y += 14;
 
     p.clientes.forEach((c, k) => {
@@ -114,7 +117,7 @@
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...gris);
       doc.text(`Cliente ${k + 1} de ${t.clientes}`, M + 14, y + 15);
       doc.text('Teléfono', M + ANCHO / 2, y + 15);
-      doc.text(`${c.items.length} diseño${c.items.length === 1 ? '' : 's'} · ${unidades(c.items)} unid.`, W - M - 12, y + 15, { align: 'right' });
+      doc.text(`${c.items.length} diseño${c.items.length === 1 ? '' : 's'} · ${cant(unidades(c.items))} unid.`, W - M - 12, y + 15, { align: 'right' });
       doc.setFontSize(12); doc.setTextColor(...negro);
       doc.setFont('helvetica', 'bold'); doc.text(c.cliente, M + 14, y + 32);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.text(c.telefono || '—', M + ANCHO / 2, y + 32);
@@ -148,7 +151,7 @@
         ty += 11; doc.setFontSize(7.5); doc.setTextColor(...gris);
         doc.text(doc.splitTextToSize(it.ruta.join(' / '), COL - 16).slice(0, 2), x + 8, ty);
         doc.setFontSize(10); doc.setTextColor(...negro);
-        doc.text(`Cantidad: ${it.cantidad}`, x + 8, y + ALTO_T - 9);
+        doc.text(`Cantidad: ${cant(it.cantidad)}`, x + 8, y + ALTO_T - 9);
       });
       y += ALTO_T + 22;
     });
@@ -173,10 +176,10 @@
     doc.text('Resumen del pedido', M, y); y += 20;
     fila(ENCABEZADO, true, lila);
     for (const c of p.clientes) {
-      c.items.forEach((it, n) => fila([n === 0 ? c.cliente : '', `${it.codigo}${it.nombre ? ' ' + it.nombre : ''}`, it.ruta.join(' / '), String(it.cantidad)]));
-      fila(['', '', `Total ${c.cliente}`, String(unidades(c.items))], true);
+      c.items.forEach((it, n) => fila([n === 0 ? c.cliente : '', `${it.codigo}${it.nombre ? ' ' + it.nombre : ''}`, it.ruta.join(' / '), cant(it.cantidad)]));
+      fila(['', '', `Total ${c.cliente}`, cant(unidades(c.items))], true);
     }
-    fila(['TOTAL GENERAL', `${t.disenos} diseños`, `${t.clientes} cliente${t.clientes === 1 ? '' : 's'}`, String(t.unidades)], true, lila);
+    fila(['TOTAL GENERAL', `${t.disenos} diseños`, `${t.clientes} cliente${t.clientes === 1 ? '' : 's'}`, cant(t.unidades)], true, lila);
     return doc.output('blob');
   }
 
@@ -203,7 +206,7 @@
     ws.getCell('E2').font = { size: 14, bold: true }; ws.getCell('E2').alignment = { horizontal: 'right' };
     ws.mergeCells('A3:F3'); ws.getCell('A3').value = new Date(p.fecha).toLocaleString('es-CR', { dateStyle: 'long', timeStyle: 'short' });
     ws.getCell('A3').font = { color: { argb: 'FF6B6478' } };
-    ws.mergeCells('A4:F4'); ws.getCell('A4').value = `Clientes: ${t.clientes}    Diseños: ${t.disenos}    Unidades: ${t.unidades}`;
+    ws.mergeCells('A4:F4'); ws.getCell('A4').value = `Clientes: ${t.clientes}    Diseños: ${t.disenos}    Unidades: ${cant(t.unidades)}`;
     ws.getCell('A4').font = { bold: true };
     ws.getRow(2).height = 26;
 
@@ -244,7 +247,7 @@
       const primera = r;
       c.items.forEach((it, n) => {
         const row = ws.getRow(r);
-        row.values = [n + 1, '', it.codigo, it.nombre || '', it.ruta.join(' / '), it.cantidad];
+        row.values = [n + 1, '', it.codigo, it.nombre || '', it.ruta.join(' / '), red2(it.cantidad)];
         row.height = 72;
         row.alignment = { vertical: 'middle', wrapText: true };
         row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
@@ -290,7 +293,7 @@
     ];
     dt.getRow(1).font = { bold: true };
     for (const c of p.clientes) {
-      for (const it of c.items) dt.addRow([num4(p.numero), p.tienda || '', c.cliente, c.telefono || '', it.codigo, it.nombre || '', it.ruta.join(' / '), it.cantidad]);
+      for (const it of c.items) dt.addRow([num4(p.numero), p.tienda || '', c.cliente, c.telefono || '', it.codigo, it.nombre || '', it.ruta.join(' / '), red2(it.cantidad)]);
     }
     dt.autoFilter = { from: 'A1', to: 'H1' };
     dt.views = [{ state: 'frozen', ySplit: 1 }];
@@ -305,5 +308,5 @@
     return new File([blob], nombreArchivo(p, formato), { type: MIME[formato] });
   }
 
-  window.Documentos = { generar, normalizar, nombresClientes, nombreArchivo, textoWhatsApp, totales, MIME };
+  window.Documentos = { cant, red2, unidades, generar, normalizar, nombresClientes, nombreArchivo, textoWhatsApp, totales, MIME };
 })();

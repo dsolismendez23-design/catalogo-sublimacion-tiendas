@@ -270,7 +270,13 @@ document.querySelectorAll('.modal').forEach((m) => m.addEventListener('click', (
 // ---------- Pedido (uno o varios clientes) ----------
 const clienteVacio = () => ({ cliente: '', telefono: '', notas: '', items: [] });
 const cli = () => envio.clientes[envio.actual];
-const unid = (items) => items.reduce((s, i) => s + i.cantidad, 0);
+const unid = (items) => window.Documentos.unidades(items);
+const cant = (n) => window.Documentos.cant(n);
+// Lee una cantidad escrita como 1.25 o 1,25; devuelve null si no es un número mayor que 0
+function leerCantidad(v) {
+  const n = window.Documentos.red2(String(v ?? '').trim().replace(',', '.'));
+  return /^\d*[.,]?\d+$/.test(String(v ?? '').trim()) && n > 0 ? n : null;
+}
 const vacio = (c) => !c.cliente.trim() && !c.items.length && !c.telefono.trim() && !c.notas.trim();
 
 function guardarBorrador() {
@@ -306,7 +312,7 @@ function pintarClientes() {
     </span>`).join('');
   const total = envio.clientes.reduce((s, c) => s + c.items.length, 0);
   $('#pedResumen').textContent = varios
-    ? `Pedido con ${envio.clientes.length} clientes · ${total} diseños · ${envio.clientes.reduce((s, c) => s + unid(c.items), 0)} unid.` : '';
+    ? `Pedido con ${envio.clientes.length} clientes · ${total} diseños · ${cant(envio.clientes.reduce((s, c) => s + unid(c.items), 0))} unid.` : '';
   $('#btnVerPedido').textContent = varios ? `Pedido (${envio.clientes.length} cl. · ${total})` : `Pedido (${total})`;
 }
 
@@ -316,11 +322,11 @@ function pintarPedido() {
     <li class="ped-item" data-n="${n}">
       <img src="${mini(it.id, 200)}" alt="">
       <div class="d"><b>${esc(it.codigo)}</b><small title="${esc(it.ruta.join(' › '))}">${esc(it.ruta.join(' › '))}</small></div>
-      <div class="cant"><button data-menos>−</button><input data-cant type="text" inputmode="numeric" value="${it.cantidad}"><button data-mas>+</button></div>
+      <div class="cant"><button data-menos>−</button><input data-cant type="text" inputmode="decimal" value="${cant(it.cantidad)}" title="Puede usar decimales, ej. 1.25"><button data-mas>+</button></div>
       <button class="quitar" data-quitar title="Quitar">×</button>
     </li>`).join('');
   $('#pedConteo').textContent = c.items.length
-    ? `${c.items.length} diseño${c.items.length === 1 ? '' : 's'} · ${unid(c.items)} unid.` : 'Sin diseños';
+    ? `${c.items.length} diseño${c.items.length === 1 ? '' : 's'} · ${cant(unid(c.items))} unid.` : 'Sin diseños';
   pintarClientes();
   guardarBorrador();
 }
@@ -366,15 +372,17 @@ $('#pedLista').addEventListener('click', (e) => {
   const c = cli();
   const it = c.items[+li.dataset.n];
   if (e.target.closest('[data-quitar]')) { c.items.splice(+li.dataset.n, 1); refrescarTarjeta(it.id); }
-  else if (e.target.closest('[data-mas]')) it.cantidad++;
-  else if (e.target.closest('[data-menos]')) it.cantidad = Math.max(1, it.cantidad - 1);
+  else if (e.target.closest('[data-mas]')) it.cantidad = window.Documentos.red2(it.cantidad + 1);
+  else if (e.target.closest('[data-menos]')) { if (it.cantidad - 1 > 0) it.cantidad = window.Documentos.red2(it.cantidad - 1); }
   else return;
   pintarPedido();
 });
 $('#pedLista').addEventListener('change', (e) => {
   if (!e.target.matches('[data-cant]')) return;
   const it = cli().items[+e.target.closest('.ped-item').dataset.n];
-  it.cantidad = Math.max(1, parseInt(e.target.value, 10) || 1);
+  const n = leerCantidad(e.target.value);
+  if (n === null) toast('Cantidad no válida: use un número mayor que 0, por ejemplo 2 o 1.25');
+  else it.cantidad = n;
   pintarPedido();
 });
 for (const [sel, campo] of [['#pedCliente', 'cliente'], ['#pedTelefono', 'telefono'], ['#pedNotas', 'notas']]) {
@@ -469,10 +477,10 @@ $('#btnHacerPedido').onclick = async () => {
   }
   const datos = clientes.map((c) => ({
     cliente: c.cliente.trim(), telefono: c.telefono.trim(), notas: c.notas.trim(),
-    items: c.items.map((i) => ({ id: i.id, codigo: i.codigo, nombre: i.nombre || '', ruta: i.ruta, cantidad: Math.max(1, parseInt(i.cantidad, 10) || 1) })),
+    items: c.items.map((i) => ({ id: i.id, codigo: i.codigo, nombre: i.nombre || '', ruta: i.ruta, cantidad: leerCantidad(i.cantidad) ?? 1 })),
   }));
   const t = { d: datos.reduce((s, c) => s + c.items.length, 0), u: datos.reduce((s, c) => s + unid(c.items), 0) };
-  const resumen = `${datos.length} cliente${datos.length === 1 ? '' : 's'} · ${t.d} diseños · ${t.u} unidades`;
+  const resumen = `${datos.length} cliente${datos.length === 1 ? '' : 's'} · ${t.d} diseños · ${cant(t.u)} unidades`;
   const tienda = await elegirTienda(resumen);
   if (!tienda) return;
   const formato = await elegirFormato(`${tienda} · ${resumen}`);
@@ -560,7 +568,7 @@ async function pintarPedidos() {
       <td>${p.tienda ? `<span class="tag-tienda">${esc(p.tienda)}</span>` : '—'}</td>
       <td>${p.clientes.map((c) => `${esc(c.cliente)}${c.telefono ? ` <small>${esc(c.telefono)}</small>` : ''}`).join('<br>')}</td>
       <td title="${esc(codigos.join(', '))}">${t.disenos}: ${esc(codigos.slice(0, 6).join(', '))}${codigos.length > 6 ? '…' : ''}</td>
-      <td>${t.unidades}</td>
+      <td>${cant(t.unidades)}</td>
       <td class="acc">
         <button class="sec" data-acc="abrir">Abrir</button>
         <button class="sec solo-escritorio" data-acc="carpeta">Carpeta</button>
@@ -595,52 +603,74 @@ $('#tablaPedidos').addEventListener('click', async (e) => {
 });
 
 // ---------- Control de pedidos ----------
-// Cada pedido guarda control = { recibidos: { "cliente-ítem": fecha }, estado: 'pendiente' | 'completado', cerrado: fecha }.
-// Sin estado = todavía no se ha cerrado. Las marcas se guardan al tocarlas; "Cerrar pedido" pone el estado.
+// Cada cliente de un pedido se controla por separado: se marca lo recibido y se cierra solo, Completado o Pendiente.
+// p.control = { clientes: { "<n.º de cliente>": { recibidos: { "<n.º de ítem>": fecha }, estado: 'pendiente' | 'completado', cerrado: fecha } } }
+// Sin estado = ese cliente todavía no se ha cerrado. Las marcas se guardan al tocarlas.
 const ESTADOS = { abierto: 'Sin cerrar', pendiente: 'Pendiente', completado: 'Completado' };
-const claveItem = (k, n) => `${k}-${n}`;
 const fechaCorta = (f) => new Date(f).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' });
+const num4 = (n) => String(n).padStart(4, '0');
 
-function avance(p) {
-  const recibidos = p.control?.recibidos || {};
-  let total = 0, listos = 0;
-  p.clientes.forEach((c, k) => c.items.forEach((_, n) => { total++; if (recibidos[claveItem(k, n)]) listos++; }));
-  return { total, listos, completo: total > 0 && listos === total };
+// Control de un cliente. Convierte el formato anterior (todo el pedido junto: recibidos "cliente-ítem")
+function controlCliente(p, k) {
+  const ctl = p.control;
+  if (!ctl) return { recibidos: {} };
+  if (ctl.clientes) return { recibidos: {}, ...(ctl.clientes[k] || {}) };
+  const recibidos = {};
+  for (const [clave, f] of Object.entries(ctl.recibidos || {})) {
+    const [kk, n] = clave.split('-');
+    if (+kk === k) recibidos[n] = f;
+  }
+  const c = { recibidos };
+  if (ctl.estado) {
+    c.estado = p.clientes[k].items.every((_, n) => recibidos[n]) ? 'completado' : 'pendiente';
+    c.cerrado = ctl.cerrado;
+  }
+  return c;
 }
-const estadoDe = (p) => p.control?.estado || 'abierto';
-const htmlEstado = (p) => `<span class="estado ${estadoDe(p)}">${ESTADOS[estadoDe(p)]}</span>`;
+
+function avance(p, k) {
+  const rec = controlCliente(p, k).recibidos;
+  const items = p.clientes[k].items;
+  const listos = items.filter((_, n) => rec[n]).length;
+  return { total: items.length, listos, completo: items.length > 0 && listos === items.length };
+}
+const estadoDe = (p, k) => controlCliente(p, k).estado || 'abierto';
 
 let pedidosControl = [];
 let filtroEstado = '';
 async function pintarControl() {
   pedidosControl = (await window.api.leerPedidos()).map(window.Documentos.normalizar);
   const q = norm($('#buscarControl').value.trim());
-  const coincide = (p) => !q
-    || norm(p.tienda).includes(q)
-    || p.clientes.some((c) => norm(c.cliente).includes(q) || c.items.some((i) => norm(i.codigo) === q))
-    || String(p.numero) === q.replace(/^0+/, '');
-  const base = pedidosControl.filter(coincide);
+  // Una fila por cliente de cada pedido
+  const filas = pedidosControl.flatMap((p) => p.clientes.map((c, k) => ({ p, c, k })))
+    .filter(({ p, c }) => !q
+      || norm(p.tienda).includes(q)
+      || norm(c.cliente).includes(q)
+      || c.items.some((i) => norm(i.codigo) === q)
+      || String(p.numero) === q.replace(/^0+/, ''));
   document.querySelectorAll('#filtrosControl [data-estado]').forEach((b) => {
     const e = b.dataset.estado;
     b.classList.toggle('activo', e === filtroEstado);
-    b.querySelector('span').textContent = `(${base.filter((p) => !e || estadoDe(p) === e).length})`;
+    b.querySelector('span').textContent = `(${filas.filter(({ p, k }) => !e || estadoDe(p, k) === e).length})`;
   });
-  const lista = base.filter((p) => !filtroEstado || estadoDe(p) === filtroEstado);
-  $('#tablaControl').innerHTML = lista.map((p) => {
-    const a = avance(p);
+  const lista = filas.filter(({ p, k }) => !filtroEstado || estadoDe(p, k) === filtroEstado);
+  $('#tablaControl').innerHTML = lista.map(({ p, c, k }) => {
+    const a = avance(p, k);
+    const ctl = controlCliente(p, k);
+    const est = estadoDe(p, k);
     return `
-    <tr data-num="${p.numero}">
-      <td><b>${String(p.numero).padStart(4, '0')}</b></td>
+    <tr data-num="${p.numero}" data-k="${k}">
+      <td><b>${num4(p.numero)}</b>${p.clientes.length > 1 ? `<br><small class="suave">cliente ${k + 1} de ${p.clientes.length}</small>` : ''}</td>
       <td>${fechaCorta(p.fecha)}</td>
       <td>${p.tienda ? `<span class="tag-tienda">${esc(p.tienda)}</span>` : '—'}</td>
-      <td>${p.clientes.map((c) => esc(c.cliente)).join('<br>')}</td>
+      <td><b>${esc(c.cliente)}</b>${c.telefono ? `<br><small class="suave">${esc(c.telefono)}</small>` : ''}</td>
       <td><span class="mini-barra"><i style="width:${a.total ? Math.round((a.listos / a.total) * 100) : 0}%"></i></span>${a.listos} de ${a.total}</td>
-      <td>${htmlEstado(p)}${p.control?.cerrado ? `<br><small class="suave">${fechaCorta(p.control.cerrado)}</small>` : ''}</td>
+      <td><span class="estado ${est}">${ESTADOS[est]}</span>${ctl.cerrado ? `<br><small class="suave">${fechaCorta(ctl.cerrado)}</small>` : ''}</td>
       <td class="acc"><button class="pri" data-revisar>Abrir</button></td>
     </tr>`;
   }).join('');
   $('#sinControl').classList.toggle('oculto', lista.length > 0);
-  $('#sinControl').textContent = pedidosControl.length ? 'No hay pedidos con ese filtro.' : 'Todavía no hay pedidos.';
+  $('#sinControl').textContent = pedidosControl.length ? 'No hay clientes con ese filtro.' : 'Todavía no hay pedidos.';
 }
 $('#buscarControl').addEventListener('input', pintarControl);
 $('#filtrosControl').addEventListener('click', (e) => {
@@ -649,91 +679,102 @@ $('#filtrosControl').addEventListener('click', (e) => {
 });
 $('#tablaControl').addEventListener('click', (e) => {
   if (!e.target.closest('[data-revisar]')) return;
-  abrirRevision(+e.target.closest('tr').dataset.num);
+  const tr = e.target.closest('tr');
+  abrirRevision(+tr.dataset.num, +tr.dataset.k);
 });
 
 let revPedido = null;
-function abrirRevision(numero) {
+let revK = 0;
+function abrirRevision(numero, k) {
   revPedido = pedidosControl.find((p) => p.numero === numero);
-  if (!revPedido) return;
+  if (!revPedido || !revPedido.clientes[k]) return;
+  revK = k;
   const p = revPedido;
-  const recibidos = p.control?.recibidos || {};
-  $('#revNum').textContent = '#' + String(p.numero).padStart(4, '0');
+  const c = p.clientes[k];
+  const rec = controlCliente(p, k).recibidos;
+  $('#revNum').textContent = '#' + num4(p.numero);
   $('#revTienda').textContent = p.tienda || '';
   $('#revTienda').classList.toggle('oculto', !p.tienda);
   $('#revFecha').textContent = `Hecho el ${new Date(p.fecha).toLocaleString('es-CR', { dateStyle: 'long', timeStyle: 'short' })}`;
-  $('#revLista').innerHTML = p.clientes.map((c, k) => `
-    <div class="rev-cli">${esc(c.cliente)}<small>${c.items.length} diseño${c.items.length === 1 ? '' : 's'} · ${unid(c.items)} unid.</small></div>
+  $('#revLista').innerHTML = `
+    <div class="rev-cli">${esc(c.cliente)}${p.clientes.length > 1 ? ` · cliente ${k + 1} de ${p.clientes.length}` : ''}<small>${c.items.length} diseño${c.items.length === 1 ? '' : 's'} · ${cant(unid(c.items))} unid.${c.telefono ? ' · Tel. ' + esc(c.telefono) : ''}</small></div>
     ${c.items.map((it, n) => {
-      const f = recibidos[claveItem(k, n)];
+      const f = rec[n];
       return `<label class="rev-item${f ? ' ok' : ''}">
-        <input type="checkbox" data-item="${claveItem(k, n)}"${f ? ' checked' : ''}>
+        <input type="checkbox" data-item="${n}"${f ? ' checked' : ''}>
         <img src="${mini(it.id, 200)}" alt="" loading="lazy">
         <div class="d"><b>Código ${esc(it.codigo)}${it.nombre ? ' · ' + esc(it.nombre) : ''}</b><small>${esc(it.ruta.join(' › '))}</small></div>
-        <span class="c">× ${it.cantidad}</span>
+        <span class="c">× ${cant(it.cantidad)}</span>
         <span class="r">${f ? 'Recibido<br>' + fechaCorta(f) : ''}</span>
       </label>`;
-    }).join('')}`).join('');
+    }).join('')}
+    ${c.notas ? `<div class="rev-notas">Notas: ${esc(c.notas)}</div>` : ''}`;
   pintarRevision();
   $('#revision').classList.remove('oculto');
 }
 
 // Actualiza el avance, el estado y el texto del botón según lo marcado
 function pintarRevision() {
-  const p = revPedido;
-  const a = avance(p);
+  const a = avance(revPedido, revK);
+  const est = estadoDe(revPedido, revK);
+  const nombre = revPedido.clientes[revK].cliente;
   $('#revProgreso').textContent = `${a.listos} de ${a.total} ítems recibidos`;
-  $('#revEstado').className = `estado ${estadoDe(p)}`;
-  $('#revEstado').textContent = ESTADOS[estadoDe(p)];
+  $('#revEstado').className = `estado ${est}`;
+  $('#revEstado').textContent = ESTADOS[est];
   $('#revTodos').classList.toggle('oculto', a.completo);
-  $('#revCerrar').textContent = a.completo ? '✔ Cerrar pedido como Completado' : 'Cerrar pedido como Pendiente';
+  $('#revCerrar').textContent = a.completo ? '✔ Cerrar como Completado' : 'Cerrar como Pendiente';
   $('#revAviso').textContent = a.completo
-    ? 'Todos los ítems están recibidos: al cerrar, el pedido queda Completado.'
-    : `Faltan ${a.total - a.listos} ítem${a.total - a.listos === 1 ? '' : 's'}: al cerrar, el pedido queda Pendiente. Puede abrirlo después para marcar lo que llegue.`;
+    ? `Todos los ítems de ${nombre} están recibidos: al cerrar, queda Completado.`
+    : `Faltan ${a.total - a.listos} ítem${a.total - a.listos === 1 ? '' : 's'} de ${nombre}: al cerrar, queda Pendiente. Puede abrirlo después para marcar lo que llegue.`;
 }
 
-async function guardarRevision(control) {
+// Guarda el control de este cliente; los demás clientes del pedido quedan como estaban
+async function guardarCliente(cambio) {
+  const p = revPedido;
+  const clientes = {};
+  p.clientes.forEach((_, k) => { clientes[k] = controlCliente(p, k); });
+  clientes[revK] = cambio;
   try {
-    const p = await window.api.guardarControl(revPedido.numero, control);
-    revPedido.control = p.control;
+    const r = await window.api.guardarControl(p.numero, { clientes });
+    p.control = r.control;
     return true;
   } catch (err) {
     aviso('No se pudo guardar: ' + limpiarError(err));
     return false;
   }
 }
+const copiaCliente = () => { const c = controlCliente(revPedido, revK); return { ...c, recibidos: { ...c.recibidos } }; };
 
 $('#revLista').addEventListener('change', async (e) => {
   const chk = e.target.closest('[data-item]');
   if (!chk) return;
-  const control = { ...(revPedido.control || {}), recibidos: { ...(revPedido.control?.recibidos || {}) } };
-  if (chk.checked) control.recibidos[chk.dataset.item] = new Date().toISOString();
-  else delete control.recibidos[chk.dataset.item];
-  // Un pedido Completado al que se le quita una marca vuelve a quedar Pendiente
-  if (control.estado === 'completado' && !chk.checked) control.estado = 'pendiente';
-  if (!(await guardarRevision(control))) { chk.checked = !chk.checked; return; }
+  const c = copiaCliente();
+  if (chk.checked) c.recibidos[chk.dataset.item] = new Date().toISOString();
+  else delete c.recibidos[chk.dataset.item];
+  // Un cliente Completado al que se le quita una marca vuelve a quedar Pendiente
+  if (c.estado === 'completado' && !chk.checked) c.estado = 'pendiente';
+  if (!(await guardarCliente(c))) { chk.checked = !chk.checked; return; }
   const fila = chk.closest('.rev-item');
   fila.classList.toggle('ok', chk.checked);
-  fila.querySelector('.r').innerHTML = chk.checked ? 'Recibido<br>' + fechaCorta(control.recibidos[chk.dataset.item]) : '';
+  fila.querySelector('.r').innerHTML = chk.checked ? 'Recibido<br>' + fechaCorta(c.recibidos[chk.dataset.item]) : '';
   pintarRevision();
   pintarControl();
 });
 
 $('#revTodos').onclick = async () => {
-  const control = { ...(revPedido.control || {}), recibidos: { ...(revPedido.control?.recibidos || {}) } };
+  const c = copiaCliente();
   const ahora = new Date().toISOString();
-  revPedido.clientes.forEach((c, k) => c.items.forEach((_, n) => { control.recibidos[claveItem(k, n)] ||= ahora; }));
-  if (await guardarRevision(control)) { abrirRevision(revPedido.numero); pintarControl(); }
+  revPedido.clientes[revK].items.forEach((_, n) => { c.recibidos[n] ||= ahora; });
+  if (await guardarCliente(c)) { abrirRevision(revPedido.numero, revK); pintarControl(); }
 };
 
 $('#revCerrar').onclick = async () => {
-  const a = avance(revPedido);
+  const a = avance(revPedido, revK);
   const estado = a.completo ? 'completado' : 'pendiente';
-  const control = { ...(revPedido.control || {}), recibidos: { ...(revPedido.control?.recibidos || {}) }, estado, cerrado: new Date().toISOString() };
-  if (!(await guardarRevision(control))) return;
+  if (!(await guardarCliente({ ...copiaCliente(), estado, cerrado: new Date().toISOString() }))) return;
   $('#revision').classList.add('oculto');
   pintarControl();
-  toast(`Pedido ${String(revPedido.numero).padStart(4, '0')} cerrado como ${ESTADOS[estado]}`);
+  toast(`${revPedido.clientes[revK].cliente} (pedido ${num4(revPedido.numero)}) cerrado como ${ESTADOS[estado]}`);
 };
 
 // ---------- Configuración ----------

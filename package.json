@@ -1,7 +1,7 @@
 {
   "name": "catalogo-sublimacion-tiendas",
   "productName": "Catalogo Sublimacion Tiendas",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Catálogo de diseños de sublimación para pedidos de las tiendas (SAN RAMÓN, HEREDIA, CARTAGO, GUAPILES, DESAMPARADOS, TIBAS, BODEGA)",
   "main": "main.js",
   "author": "Diana",
